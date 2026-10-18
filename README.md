@@ -16,7 +16,7 @@ I created **CellLab** to help bridge that gap. My goal is to turn complex scient
 
 This is not about replacing books, teachers, or traditional lessons. It is about **giving people another way in**—one that makes asking questions, discovering connections, and understanding difficult concepts feel more natural.
 
-> **Different people connect with information in different ways. Everyone deserves the opportunity to understand it.**
+> **"_Different people connect with information in different ways. Everyone deserves the opportunity to understand it._"**
 >
 > — Rodrigo Felga de Castro
 
