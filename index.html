@@ -26,7 +26,7 @@ button,input,select{font:inherit}button{cursor:pointer}button:focus-visible,inpu
 <main class="workspace">
 <section class="viewer" aria-label="Interactive animated animal cell">
 <div class="viewer-header"><div><h1>Explore the cell from the inside</h1><p>Touch or click an organelle to discover how it works.</p></div><div class="modes" role="group" aria-label="Animation demonstration"><button class="mode" data-mode="explore" aria-pressed="true">Explore</button><button class="mode" data-mode="protein" aria-pressed="false">Protein route</button><button class="mode" data-mode="energy" aria-pressed="false">Energy</button><button class="mode" data-mode="transport" aria-pressed="false">Transport</button></div></div>
-<div class="stage-wrap"><div class="stage" id="stage"><canvas id="cellCanvas" width="1448" height="1086" role="img" aria-label="Animated animal cell. Select organelle names in the inspector or click the corresponding area of the image."></canvas><div class="microtag"><span>●</span> CELLULAR ACTIVITY <span id="sceneStatus">LIVE</span></div><div class="imagehint" id="imageHint">Click a structure to inspect it · Drag to move · Scroll to zoom</div><div class="hover" id="hoverTag"></div></div></div>
+<div class="stage-wrap"><div class="stage" id="stage"><canvas id="cellCanvas" width="1448" height="1086" role="img" aria-label="Animated animal cell. Select organelle names in the inspector or click the corresponding area of the image."></canvas><div class="microtag"><span>●</span> CELLULAR ACTIVITY <span id="sceneStatus">LIVE</span></div><div class="imagehint" id="imageHint">Tap or click a structure · Drag to move · Pinch or scroll to zoom</div><div class="hover" id="hoverTag"></div></div></div>
 <div class="toolbar"><div class="toolgroup"><button class="tool primary" id="playBtn" aria-label="Pause animation">❚❚ <span id="playText">Pause</span></button><button class="tool icononly" id="zoomOut" title="Zoom out" aria-label="Zoom out">−</button><button class="tool icononly" id="zoomIn" title="Zoom in" aria-label="Zoom in">+</button><button class="tool" id="resetBtn">↺ Reset</button></div><label class="labeloption"><input id="labelsToggle" type="checkbox"> Labels</label><label class="labeloption"><input id="particlesToggle" type="checkbox" checked> Particles</label><div class="rate">Speed <select id="speed" aria-label="Animation speed"><option value="0.5">0.5×</option><option selected value="1">1×</option><option value="1.5">1.5×</option><option value="2">2×</option></select></div><button class="tool" id="saveBtn" title="Save the current view as a PNG">⇩ Save frame</button></div>
 <div class="key"><span><i class="legend-teal"></i> Cell membrane</span><span><i class="legend-pink"></i> Protein synthesis</span><span><i class="legend-yellow"></i> Structure & transport</span><span><i class="legend-blue"></i> Organelles & vesicles</span></div>
 </section>
@@ -62,6 +62,8 @@ let zoom=1,targetZoom=1,fx=W/2,fy=H/2,tx=W/2,ty=H/2,panX=0,panY=0;
 let tour=false,tourIndex=0,tourTime=0;
 const tourStops=['membrane','cytoplasm','nucleus','nucleolus','ribosomes','roughER','golgi','mitochondria','lysosomes','centrioles','vesicles','smoothER','microtubules'];
 let dragging=false,down=null,dragMoved=false;
+const activePointers=new Map();let pinch=null;
+function beginPinch(){const [a,b]=[...activePointers.values()];const midpoint={clientX:(a.clientX+b.clientX)/2,clientY:(a.clientY+b.clientY)/2};pinch={distance:Math.max(1,Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY)),zoom,anchor:canvasCoords(midpoint)};targetZoom=zoom;tx=fx;ty=fy;dragMoved=true;hovered=null;$('hoverTag').style.display='none';}
 const particles=[];let seed=23;function random(){seed=(1664525*seed+1013904223)>>>0;return seed/4294967296;}
 for(let i=0;i<106;i++){let a=random()*Math.PI*2,r=Math.sqrt(random());particles.push({x:724+Math.cos(a)*520*r,y:528+Math.sin(a)*368*r,size:1.4+random()*3.1,phase:random()*6.3,drift:5+random()*26,color:random()>.55?'#7cfeea':random()>.5?'#ffffff':'#fff5b2',speed:.25+random()*.5});}
 const pathMap={
@@ -108,9 +110,37 @@ function togglePlay(){running=!running;$('playText').textContent=running?'Pause'
 function buildOrgList(){let list=$('orgList');for(const o of organelles){let b=document.createElement('button');b.type='button';b.className='organelle';b.dataset.id=o.id;b.setAttribute('aria-pressed',String(selected===o.id));b.innerHTML=`<i class="dot" style="--organelle:${o.color}"></i><span>${o.name}</span>`;b.addEventListener('click',()=>select(o.id));list.appendChild(b);}}
 function canvasCoords(evt){const r=canvas.getBoundingClientRect(),sx=(evt.clientX-r.left)*W/r.width,sy=(evt.clientY-r.top)*H/r.height;return{x:(sx-W/2-panX)/zoom+fx,y:(sy-H/2-panY)/zoom+fy,sx,sy};}
 function hitsAt(x,y){const matches=[];for(let i=0;i<organelles.length;i++){const o=organelles[i];for(const area of [{x:o.x,y:o.y,rx:o.rx,ry:o.ry},...(o.extra||[])]){const d=Math.pow((x-area.x)/area.rx,2)+Math.pow((y-area.y)/area.ry,2);if(d<=1)matches.push({o,score:o.priority+Math.max(0,1-d)*3});}}if(matches.length)return matches.sort((a,b)=>b.score-a.score)[0].o;let outer=Math.pow((x-715)/531,2)+Math.pow((y-505)/420,2);return outer<.85?byId.cytoplasm:null;}
-canvas.addEventListener('pointerdown',e=>{canvas.setPointerCapture(e.pointerId);down={px:e.clientX,py:e.clientY,lastX:e.clientX,lastY:e.clientY};dragging=true;dragMoved=false;});
-canvas.addEventListener('pointermove',e=>{const rect=canvas.getBoundingClientRect();if(dragging&&down){let dx=e.clientX-down.lastX,dy=e.clientY-down.lastY;if(Math.hypot(e.clientX-down.px,e.clientY-down.py)>6)dragMoved=true;if(dragMoved){panX+=dx*W/rect.width;panY+=dy*H/rect.height;}down.lastX=e.clientX;down.lastY=e.clientY;canvas.style.cursor=dragMoved?'grabbing':'grab';return;}const p=canvasCoords(e),org=hitsAt(p.x,p.y);hovered=org;const tip=$('hoverTag');if(org){tip.textContent=org.name;tip.style.display='block';tip.style.left=Math.min(Math.max(e.clientX-rect.left,70),rect.width-70)+'px';tip.style.top=(e.clientY-rect.top)+'px';canvas.style.cursor='pointer';}else{tip.style.display='none';canvas.style.cursor='grab';}});
-canvas.addEventListener('pointerup',e=>{if(dragging&&!dragMoved){const p=canvasCoords(e),o=hitsAt(p.x,p.y);if(o)select(o.id);}dragging=false;down=null;canvas.style.cursor='grab';});canvas.addEventListener('pointercancel',()=>{dragging=false;down=null;});canvas.addEventListener('pointerleave',()=>{$('hoverTag').style.display='none';});
+canvas.addEventListener('pointerdown',e=>{
+if(e.pointerType==='mouse'&&e.button!==0)return;
+canvas.setPointerCapture(e.pointerId);activePointers.set(e.pointerId,{clientX:e.clientX,clientY:e.clientY});
+if(activePointers.size>=2){beginPinch();return;}
+down={px:e.clientX,py:e.clientY,lastX:e.clientX,lastY:e.clientY};dragging=true;dragMoved=false;
+});
+canvas.addEventListener('pointermove',e=>{
+const rect=canvas.getBoundingClientRect();
+if(activePointers.has(e.pointerId))activePointers.set(e.pointerId,{clientX:e.clientX,clientY:e.clientY});
+if(pinch&&activePointers.size>=2){
+const [a,b]=[...activePointers.values()],distance=Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);
+zoom=targetZoom=Math.min(2.8,Math.max(.75,pinch.zoom*distance/pinch.distance));
+if(zoom>=1){fx=Math.max(W/(2*zoom),Math.min(W-W/(2*zoom),fx));fy=Math.max(H/(2*zoom),Math.min(H-H/(2*zoom),fy));}else{fx=W/2;fy=H/2;}tx=fx;ty=fy;
+const sx=((a.clientX+b.clientX)/2-rect.left)*W/rect.width,sy=((a.clientY+b.clientY)/2-rect.top)*H/rect.height;
+panX=sx-W/2-(pinch.anchor.x-fx)*zoom;panY=sy-H/2-(pinch.anchor.y-fy)*zoom;
+canvas.style.cursor='grabbing';return;
+}
+if(dragging&&down&&activePointers.has(e.pointerId)){let dx=e.clientX-down.lastX,dy=e.clientY-down.lastY;if(Math.hypot(e.clientX-down.px,e.clientY-down.py)>6)dragMoved=true;if(dragMoved){panX+=dx*W/rect.width;panY+=dy*H/rect.height;}down.lastX=e.clientX;down.lastY=e.clientY;canvas.style.cursor=dragMoved?'grabbing':'grab';return;}
+if(e.pointerType==='touch')return;
+const p=canvasCoords(e),org=hitsAt(p.x,p.y);hovered=org;const tip=$('hoverTag');if(org){tip.textContent=org.name;tip.style.display='block';tip.style.left=Math.min(Math.max(e.clientX-rect.left,70),rect.width-70)+'px';tip.style.top=(e.clientY-rect.top)+'px';canvas.style.cursor='pointer';}else{tip.style.display='none';canvas.style.cursor='grab';}
+});
+function finishPointer(e,cancelled=false){
+if(!activePointers.has(e.pointerId))return;
+const wasPinching=!!pinch;activePointers.delete(e.pointerId);
+if(!cancelled&&!wasPinching&&dragging&&!dragMoved){const p=canvasCoords(e),o=hitsAt(p.x,p.y);if(o)select(o.id);}
+pinch=null;
+if(activePointers.size>=2){beginPinch();return;}
+if(activePointers.size===1){const p=[...activePointers.values()][0];down={px:p.clientX,py:p.clientY,lastX:p.clientX,lastY:p.clientY};dragging=true;dragMoved=true;}
+else{dragging=false;down=null;dragMoved=false;canvas.style.cursor='grab';}
+}
+canvas.addEventListener('pointerup',e=>finishPointer(e));canvas.addEventListener('pointercancel',e=>finishPointer(e,true));canvas.addEventListener('lostpointercapture',e=>finishPointer(e,true));canvas.addEventListener('pointerleave',()=>{$('hoverTag').style.display='none';});
 canvas.addEventListener('wheel',e=>{e.preventDefault();targetZoom=Math.min(2.8,Math.max(.75,targetZoom*(e.deltaY<0?1.10:.90)));},{passive:false});
 $('playBtn').onclick=togglePlay;$('zoomIn').onclick=()=>{targetZoom=Math.min(2.8,targetZoom+.17);};$('zoomOut').onclick=()=>{targetZoom=Math.max(.75,targetZoom-.17);};$('resetBtn').onclick=()=>resetView();$('labelsToggle').onchange=e=>{showLabels=e.target.checked;};$('particlesToggle').onchange=e=>{showParticles=e.target.checked;};$('speed').onchange=e=>{speed=Number(e.target.value)||1;};
 for(let b of document.querySelectorAll('.mode'))b.onclick=()=>setMode(b.dataset.mode);
