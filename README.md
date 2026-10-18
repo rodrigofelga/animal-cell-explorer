@@ -19,9 +19,20 @@ GitHub Pages site publishing is public. Check the repository's visibility, image
 ## Files
 
 - `index.html` — complete interactive site with the rendered cell image embedded (no external dependencies).
+- `nucleus.html` — interactive nucleus lesson with five structures, process views, labels, and a guided lesson.
+- `nucleus/index.html` — `/nucleus/` entry link that forwards to the lesson; `/nucleus.html` remains the canonical page.
+- `assets/nucleus-model.png` and `assets/nucleus-labeled.png` — nucleus lesson illustrations.
 - `assets/reference-cell.png` — source illustration for future editing.
 - `assets/animation-preview.mp4` — 8-second preview video.
 - `.nojekyll` — disables Jekyll processing on branch-based GitHub Pages deployments.
+
+## Nucleus lesson
+
+Click the nucleus in the main cell view or choose **Explore inside the nucleus** to open the child lesson. Use the breadcrumb or **Back to the animal cell** to return. Both `nucleus.html` and the `/nucleus/` entry work under the GitHub Pages project path.
+
+Select any of five structures, choose a biological process, or follow the guided lesson. Labels and animation can be toggled independently. Reduced-motion preferences start animations paused. Escape closes an expanded explanation first; press it again to return to the whole cell.
+
+Before publishing, serve the repository with a local static server and check the parent-to-lesson navigation, both entry URLs, images, structure controls, process modes, and return navigation at desktop and mobile widths.
 
 ## Updating
 
